@@ -14,15 +14,20 @@ object Visualtron extends SimpleSwingApplication {
 
   private val resultHandler = new ResultHandler()
   private val loader = new Loader(resultHandler)
+  private val startingHeight = 600
 
   private val editorArea = new TextArea {}
   private val editorScrollPane = new ScrollPane {
     contents = editorArea
   }
-  private val browserScrollPane = new ScrollPane
+  private val visualsScrollPane = new ScrollPane {
+    verticalScrollBarPolicy = ScrollPane.BarPolicy.Never
+    horizontalScrollBarPolicy = ScrollPane.BarPolicy.Never
+  }
   private val splitPane = new SplitPane {
     leftComponent = editorScrollPane
-    rightComponent = browserScrollPane
+    rightComponent = visualsScrollPane
+    dividerLocation = startingHeight / 2
   }
   private val borderPanel = new BorderPanel {
     add(splitPane, BorderPanel.Position.Center)
@@ -37,14 +42,18 @@ object Visualtron extends SimpleSwingApplication {
     case scriptLoaded: ScriptLoadedEvent => {
       editorArea.text = scriptLoaded.script
     }
-    case componentLoaded: ComponentLoadedEvent => {
-      browserScrollPane.viewportView = componentLoaded.component
+    case componentsLoaded: ComponentsLoadedEvent => {
+      visualsScrollPane.viewportView = new TabbedPane {
+        pages ++= componentsLoaded.components.map{bundle =>
+          new TabbedPane.Page(bundle.name, new ScrollPane(bundle.component))
+        }
+      }
     }
   }
 
   def top = new MainFrame {
     title = "Visualtron"
     contents = borderPanel
-    size = new Dimension(800, 600)
+    size = new Dimension(800, startingHeight)
   }
 }

@@ -9,7 +9,6 @@ import scala.swing.event.Event
 import swing.{Component, Publisher}
 
 case class ScriptLoadedEvent(val script: String) extends Event
-case class ComponentLoadedEvent(val component: Component) extends Event
 case class LoadingURLEvent(val url: String) extends Event
 
 class Loader(val resultHandler: ResultHandler) extends Publisher {
