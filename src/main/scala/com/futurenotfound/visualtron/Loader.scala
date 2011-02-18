@@ -16,7 +16,6 @@ class Loader(val resultHandler: ResultHandler) extends Publisher {
   private var lastLoaded: String = ""
 
   def loadText(groovyText: String): Unit = {
-    println(groovyText)
     refreshContent(groovyText, null)
   }
 

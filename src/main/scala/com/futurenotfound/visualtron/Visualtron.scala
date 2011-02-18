@@ -21,8 +21,6 @@ object Visualtron extends SimpleSwingApplication {
     contents = editorArea
   }
   private val visualsScrollPane = new ScrollPane {
-    verticalScrollBarPolicy = ScrollPane.BarPolicy.Never
-    horizontalScrollBarPolicy = ScrollPane.BarPolicy.Never
   }
   private val splitPane = new SplitPane {
     leftComponent = editorScrollPane
@@ -36,7 +34,6 @@ object Visualtron extends SimpleSwingApplication {
   listenTo(loader, resultHandler, editorArea.keys)
   reactions += {
     case KeyPressed(`editorArea`, Enter, Control, _) => {
-      println(editorArea.text)
       loader.loadText(editorArea.text)
     }
     case scriptLoaded: ScriptLoadedEvent => {
@@ -45,7 +42,10 @@ object Visualtron extends SimpleSwingApplication {
     case componentsLoaded: ComponentsLoadedEvent => {
       visualsScrollPane.viewportView = new TabbedPane {
         pages ++= componentsLoaded.components.map{bundle =>
-          new TabbedPane.Page(bundle.name, new ScrollPane(bundle.component))
+          val innerScrollPane = new ScrollPane(new BorderPanel{
+            add(bundle.component, BorderPanel.Position.Center)
+          })
+          new TabbedPane.Page(bundle.name, innerScrollPane)
         }
       }
     }
