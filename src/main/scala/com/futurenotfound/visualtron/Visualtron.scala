@@ -36,18 +36,25 @@ object Visualtron extends SimpleSwingApplication {
     case KeyPressed(`editorArea`, Enter, Control, _) => {
       loader.loadText(editorArea.text)
     }
-    case scriptLoaded: ScriptLoadedEvent => {
-      editorArea.text = scriptLoaded.script
-    }
     case componentsLoaded: ComponentsLoadedEvent => {
-      visualsScrollPane.viewportView = new TabbedPane {
+      val originalDividerLocation = splitPane.dividerLocation
+      splitPane.rightComponent = new TabbedPane {
         pages ++= componentsLoaded.components.map{bundle =>
-          val innerScrollPane = new ScrollPane(new BorderPanel{
-            add(bundle.component, BorderPanel.Position.Center)
+          val innerScrollPane = new ScrollPane(new GridBagPanel{
+            val constraints = new Constraints
+            constraints.fill = GridBagPanel.Fill.Both
+            constraints.gridx = 0
+            constraints.gridy = 0
+            constraints.gridwidth = 1
+            constraints.gridheight = 1
+            constraints.weightx = 1
+            constraints.weighty = 1
+            layout(bundle.component) = constraints
           })
           new TabbedPane.Page(bundle.name, innerScrollPane)
         }
       }
+      splitPane.dividerLocation = originalDividerLocation
     }
   }
 

@@ -1,35 +1,42 @@
 package com.futurenotfound.visualtron
 
 import scala.io._
-import javax.swing._
-import javax.script. {ScriptEngine, ScriptEngineManager}
 import java.util.concurrent. {Executors, ExecutorService}
 import scala.collection.immutable._
 import scala.swing.event.Event
-import swing.{Component, Publisher}
+import java.io.{PrintWriter, StringWriter}
+import scala.swing.{TextArea, Publisher}
+import java.util.concurrent.atomic.AtomicReference
+import tools.nsc.{Settings, Interpreter}
 
-case class ScriptLoadedEvent(val script: String) extends Event
 case class LoadingURLEvent(val url: String) extends Event
 
 class Loader(val resultHandler: ResultHandler) extends Publisher {
   private val executorService: ExecutorService = Executors.newSingleThreadExecutor
-  private var lastLoaded: String = ""
 
-  def loadText(groovyText: String): Unit = {
-    refreshContent(groovyText, null)
+  def loadText(script: String): Unit = {
+    refreshContent(script, null)
   }
 
   def load(url: String): Unit = {
     loadText(getText(url))
   }
 
-  private def refreshContent(groovyText: String, url: String): Unit = {
-    SwingUtilities.invokeLater(new Runnable {
+  private def refreshContent(script: String, url: String): Unit = {
+    executorService.execute(new Runnable {
       def run: Unit = {
-        lastLoaded = groovyText
-        publish(new ScriptLoadedEvent(lastLoaded))
-        val result = evaluateScript(groovyText)
-        resultHandler.handle(result)
+        try {
+          val result = evaluateScript(script)
+          resultHandler.handle(result)
+        }
+        catch {
+          case throwable: Throwable => {
+            val stringWriter = new StringWriter()
+            val printWriter = new PrintWriter(stringWriter)
+            throwable.printStackTrace(printWriter)
+            publish(ComponentsLoadedEvent(List(ComponentBundle("Error", new TextArea(stringWriter.toString())))))
+          }
+        }
       }
     })
   }
@@ -43,10 +50,18 @@ class Loader(val resultHandler: ResultHandler) extends Publisher {
     getText(url)
   }
 
-  private def evaluateScript(groovyText: String): Any = {
-    val factory = new ScriptEngineManager()
-    val engine: ScriptEngine = factory.getEngineByName("groovy")
-    engine.put("loader", this)
-    return engine.eval(groovyText)
+  private def evaluateScript(script: String): Any = {
+    val settings = new Settings()
+    settings.usejavacp.value = true
+    settings.classpath.value = System.getProperty("java.class.path")
+    println(settings.classpath.value)
+    val interpreter = new Interpreter(settings)
+    interpreter.setContextClassLoader()
+    val atomicReference = new AtomicReference()
+    interpreter.bind("result", atomicReference.getClass().getCanonicalName() + "[Any]", atomicReference)
+    script.split("\r+\n+").map(_.trim).filter(_.length > 0).foreach{line =>
+      interpreter.interpret(line)
+    }
+    return atomicReference.get()
   }
 }
